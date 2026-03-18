@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyrics Terminal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+  }
+
+  /* ── Window ── */
+  .window {
+    width: 820px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.8);
+  }
+
+  .titlebar {
+    background: #2a2a2a;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #ffbd2e; }
+  .dot.g { background: #28c840; }
+  .win-title {
+    font-size: 12px; color: #555; letter-spacing: 1px;
+    margin: 0 auto; transform: translateX(-20px);
+  }
+
+  /* ── Terminal body ── */
+  .terminal {
+    background: #000;
+    padding: 22px 26px 32px;
+    height: 460px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .terminal::-webkit-scrollbar { display: none; }
+
+  /* header */
+  .hd   { font-size: 14px; color: #3b7fd4; margin-bottom: 5px; }
+  .div  { font-size: 13px; color: #1a3a5c; margin-bottom: 4px; letter-spacing: 1px; }
+  .meta { font-size: 13px; color: #3b7fd4; margin-bottom: 2px; }
+  .meta b { color: #5ba3f5; }
+  .gap  { height: 14px; }
+
+  /* lines */
+  .line {
+    font-size: 14px; color: #3b7fd4;
+    display: flex; gap: 8px; align-items: baseline;
+    line-height: 1.7; min-height: 1.7em;
+  }
+  .line .p { color: #1e4a7a; flex-shrink: 0; }
+
+  /* 하이라이트만 파란 배경 */
+  .line.highlight {
+    background: #2a5cd4; color: #ffffff;
+    padding: 2px 8px; margin: 1px 0; border-radius: 2px;
+    font-weight: bold;
+  }
+  .line.highlight .p { color: #aad0ff; }
+
+  /* blinking cursor */
+  .cur {
+    display: inline-block;
+    width: 8px; height: 14px;
+    background: #3b7fd4;
+    animation: blink 1s step-end infinite;
+    vertical-align: middle; margin-left: 1px;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <div class="titlebar">
+    <div class="dot r"></div>
+    <div class="dot y"></div>
+    <div class="dot g"></div>
+    <span class="win-title">Lyrics Terminal</span>
+  </div>
+  <div class="terminal" id="term">
+    <div class="hd">>> Song playing...</div>
+    <div class="div">------------------------------------------------------------</div>
+    <div class="meta">title: <b>아무 일 없던 것처럼</b></div>
+    <div class="meta">artist: <b>Minit, 유하, 김승민</b></div>
+    <div class="div">------------------------------------------------------------</div>
+    <div class="gap"></div>
+    <div id="lrc"></div>
+  </div>
+</div>
+
+<!-- MP3 파일을 같은 폴더에 song.mp3 이름으로 넣으세요 -->
+<audio id="aud" src="song.mp3" preload="auto"></audio>
+
+<script>
+const LYRICS = [
+  { text: "네가 없는 하루는 공백",                        at: 11.0,  type: "normal", speed: 50 },
+  { text: "낮과 밤이 바뀐 지 오래",                       at: 14.0,  type: "normal", speed: 50 },
+  { text: "이렇게 마음 닫는 게 편하다면 I'm okay",         at: 17.0,  type: "normal", speed: 45 },
+  { text: "you don't care",                                at: 21.8,  type: "normal", speed: 50 },
+  { text: "여전히 I'm not so fine yeah baby",              at: 23.0,  type: "normal", speed: 50 },
+  { text: "잊을만하면 내 기억 속에",                       at: 26.0,  type: "normal", speed: 50 },
+  { text: "네 향이 느껴져 혼자 여기서",                    at: 29.0,  type: "normal", speed: 50 },
+  { text: "또 널 찾았어",                                  at: 32.0,  type: "normal", speed: 50 },
+  { text: "날 자꾸만 아프게 해요",                         at: 34.0,  type: "normal", speed: 55 },
+  { text: "모든 걸 부시고",                                at: 38.0,  type: "normal", speed: 55 },
+  { text: "무너뜨린다 해도 이해해",                        at: 40.9,  type: "normal", speed: 55 },
+  { text: "네가 곁에 있다면",                              at: 44.0,  type: "normal", speed: 55 },
+  { text: "BLANK",                                         at: 46.5,  type: "blank" },
+  { text: "아픔 따윈 잊으면 돼",                           at: 48.0,  type: "highlight", speed: 50 },
+  { text: "예뻤던 우리의 날이",                            at: 52.0,  type: "highlight", speed: 50 },
+  { text: "사라져 가 기억 속에",                           at: 54.0,  type: "highlight", speed: 50 },
+  { text: "눈물로 가득해져 가",                            at: 58.0,  type: "highlight", speed: 50 },
+  { text: "단 한 번만 내게 와준다면 널 지울게",             at: 60.9,  type: "highlight", speed: 45 },
+  { text: "아무 일 없듯 나지막이 날 안아주면",              at: 67.0,  type: "highlight", speed: 50 },
+  { text: "BLANK",                                         at: 70.0,  type: "blank" },
+  { text: "baby why are you sad?",                         at: 72.0,  type: "normal", speed: 50 },
+  { text: "maybe it's not okay?",                          at: 74.0,  type: "normal", speed: 50 },
+  { text: "oh, did you talk to friends?",                  at: 75.0,  type: "normal", speed: 50 },
+  { text: "word travels too fast",                         at: 77.0,  type: "normal", speed: 50 },
+  { text: "you think I don't breathe too",                 at: 78.0,  type: "normal", speed: 50 },
+  { text: "I can but you can't",                           at: 79.0,  type: "normal", speed: 50 },
+  { text: "wait 단 한 번만 달려와 달라면",                  at: 81.0,  type: "normal", speed: 50 },
+  { text: "I might yeah",                                  at: 84.0,  type: "normal", speed: 50 },
+  { text: "cause you're still",                            at: 84.9,  type: "normal", speed: 50 },
+  { text: "my Caroline yeah",                              at: 85.1,  type: "normal", speed: 50 },
+  { text: "you always hated lines",                        at: 86.0,  type: "normal", speed: 50 },
+  { text: "but 명확해야만 할 때야",                         at: 87.0,  type: "normal", speed: 50 },
+  { text: "우리가 갈라져야",                                at: 89.0,  type: "normal", speed: 50 },
+  { text: "이젠 이 밤 온전히 너의 거야",                    at: 90.0,  type: "normal", speed: 50 },
+  { text: "trying to face it,",                            at: 93.0,  type: "normal", speed: 50 },
+  { text: "on the other side of the exit",                 at: 94.0,  type: "normal", speed: 45 },
+  { text: "시간 지나 감정들이 불어나도",                    at: 97.0,  type: "normal", speed: 50 },
+  { text: "뒤 돌아보게 두지 마 넌 조금만",                  at: 100.0, type: "normal", speed: 50 },
+  { text: "아파도 손쓸 새 없이",                            at: 103.0, type: "normal", speed: 50 },
+  { text: "무너질 테니까 all night",                        at: 105.1, type: "normal", speed: 50 },
+  { text: "BLANK",                                         at: 106.5, type: "blank" },
+  { text: "아픔 따윈 잊으면 돼",                            at: 108.0, type: "highlight", speed: 50 },
+  { text: "예뻤던 우리의 날이",                             at: 112.5, type: "highlight", speed: 50 },
+  { text: "사라져 가 기억 속에",                            at: 114.0, type: "highlight", speed: 50 },
+  { text: "눈물로 가득해져 가",                             at: 118.0, type: "highlight", speed: 50 },
+  { text: "단 한 번만 내게 와준다면 널 지울게",              at: 120.9, type: "highlight", speed: 45 },
+  { text: "눈물이 나도 참아볼게 더 이상 이제는",             at: 127.0, type: "highlight", speed: 45 },
+  { text: "네게 닿을 수 있다면",                            at: 136.5, type: "highlight", speed: 50 },
+  { text: "눈물이 나 왜 자꾸만",                            at: 142.0, type: "highlight", speed: 50 },
+  { text: "네게 말해 여기서 나 이제 널 지울게",              at: 144.5, type: "highlight", speed: 45 },
+  { text: "아무 일 없듯 나지막이 날 안아주면",               at: 151.0, type: "highlight", speed: 50 },
+];
+
+const lrc  = document.getElementById('lrc');
+const aud  = document.getElementById('aud');
+
+window.addEventListener('load', () => {
+  const tryPlay = () => { aud.play().catch(() => {}); document.removeEventListener('click', tryPlay); };
+  aud.play().catch(() => { document.addEventListener('click', tryPlay); });
+  runLyrics();
+});
+
+async function runLyrics() {
+  const startTime = Date.now();
+  for (const item of LYRICS) {
+    const targetMs = item.at * 1000;
+    const elapsed = Date.now() - startTime;
+    const remaining = targetMs - elapsed;
+    if (remaining > 0) await wait(remaining);
+    if (item.type === 'blank') { addBlank(); continue; }
+    await typeLine(item);
+  }
+}
+
+function addBlank() {
+  const s = document.createElement('div');
+  s.style.height = '14px';
+  lrc.appendChild(s);
+}
+
+function typeLine(item) {
+  return new Promise(resolve => {
+    const el = document.createElement('div');
+    el.className = 'line ' + item.type;
+    const p = document.createElement('span');
+    p.className = 'p';
+    p.textContent = '>';
+    const t = document.createElement('span');
+    const cursor = document.createElement('span');
+    cursor.className = 'cur';
+    el.appendChild(p); el.appendChild(t); el.appendChild(cursor);
+    lrc.appendChild(el);
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const chars = [...item.text];
+    const speed = item.speed || 45;
+    let i = 0;
+    const tick = () => {
+      if (i < chars.length) {
+        t.textContent += chars[i++];
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(tick, speed);
+      } else { cursor.remove(); resolve(); }
+    };
+    tick();
+  });
+}
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
