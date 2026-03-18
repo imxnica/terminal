@@ -166,21 +166,32 @@ const LYRICS = [
 const lrc  = document.getElementById('lrc');
 const aud  = document.getElementById('aud');
 
-window.addEventListener('load', () => {
-  // 오디오가 실제로 재생 시작된 순간부터 가사 타이머 시작
-  const startLyrics = () => {
-    aud.removeEventListener('playing', startLyrics);
-    runLyrics();
-  };
-  aud.addEventListener('playing', startLyrics);
+let lyricsStarted = false;
 
-  const tryPlay = () => { aud.play().catch(() => {}); document.removeEventListener('click', tryPlay); };
-  aud.play().catch(() => { document.addEventListener('click', tryPlay); });
+function beginLyrics() {
+  if (lyricsStarted) return;
+  lyricsStarted = true;
+  runLyrics();
+}
+
+window.addEventListener('load', () => {
+  // 자동재생 시도
+  aud.play().then(() => {
+    // 성공하면 바로 가사 시작
+    beginLyrics();
+  }).catch(() => {
+    // 막히면 첫 클릭 때 재생 + 가사 시작
+    const onClick = () => {
+      aud.play().then(() => beginLyrics()).catch(() => {});
+      document.removeEventListener('click', onClick);
+    };
+    document.addEventListener('click', onClick);
+  });
 });
 
 async function runLyrics() {
   for (const item of LYRICS) {
-    // Date.now() 대신 오디오 실제 재생 위치 기준
+    // 오디오 실제 재생 위치 기준으로 싱크 맞춤
     const wait_ms = (item.at - aud.currentTime) * 1000;
     if (wait_ms > 0) await wait(wait_ms);
     if (item.type === 'blank') { addBlank(); continue; }
