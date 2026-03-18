@@ -168,34 +168,34 @@ const aud  = document.getElementById('aud');
 
 let lyricsStarted = false;
 
-function beginLyrics() {
-  if (lyricsStarted) return;
-  lyricsStarted = true;
-  runLyrics();
-}
-
 window.addEventListener('load', () => {
-  // 자동재생 시도
-  aud.play().then(() => {
-    // 성공하면 바로 가사 시작
-    beginLyrics();
-  }).catch(() => {
-    // 막히면 첫 클릭 때 재생 + 가사 시작
+  // playing = 실제로 소리 나는 순간 → 그 시점의 wallclock 기록
+  aud.addEventListener('playing', () => {
+    if (lyricsStarted) return;
+    lyricsStarted = true;
+    // 재생 시작 순간을 wallStart로 기록
+    const wallStart = Date.now();
+    runLyrics(wallStart);
+  });
+
+  // 자동재생 시도, 막히면 클릭 때 재생
+  aud.play().catch(() => {
     const onClick = () => {
-      aud.play().then(() => beginLyrics()).catch(() => {});
+      aud.play().catch(() => {});
       document.removeEventListener('click', onClick);
     };
     document.addEventListener('click', onClick);
   });
 });
 
-async function runLyrics() {
+async function runLyrics(wallStart) {
   for (const item of LYRICS) {
-    // 오디오 실제 재생 위치 기준으로 싱크 맞춤
-    const wait_ms = (item.at - aud.currentTime) * 1000;
+    // 노래 재생 시작 순간부터 경과한 시간 기준으로 싱크
+    const elapsed = (Date.now() - wallStart) / 1000;
+    const wait_ms = (item.at - elapsed) * 1000;
     if (wait_ms > 0) await wait(wait_ms);
     if (item.type === 'blank') { addBlank(); continue; }
-    await typeLine(item);
+    typeLine(item); // await 없이 — 타이핑이 싱크에 영향 안 줌
   }
 }
 
