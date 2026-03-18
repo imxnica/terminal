@@ -189,13 +189,24 @@ window.addEventListener('load', () => {
 });
 
 async function runLyrics(wallStart) {
-  for (const item of LYRICS) {
-    // 노래 재생 시작 순간부터 경과한 시간 기준으로 싱크
+  for (let i = 0; i < LYRICS.length; i++) {
+    const item = LYRICS[i];
     const elapsed = (Date.now() - wallStart) / 1000;
     const wait_ms = (item.at - elapsed) * 1000;
     if (wait_ms > 0) await wait(wait_ms);
     if (item.type === 'blank') { addBlank(); continue; }
-    typeLine(item); // await 없이 — 타이핑이 싱크에 영향 안 줌
+
+    // 다음 non-blank 줄의 at을 찾아서 이 줄에 쓸 수 있는 시간 계산
+    let nextAt = item.at + 4;
+    for (let j = i + 1; j < LYRICS.length; j++) {
+      if (LYRICS[j].type !== 'blank') { nextAt = LYRICS[j].at; break; }
+    }
+    const available_ms = (nextAt - item.at) * 1000;
+    const charCount = [...item.text].length;
+    // 가용 시간의 85%를 타이핑에 사용, 글자당 ms 계산 (최소 40, 최대 200)
+    const autoSpeed = Math.min(200, Math.max(40, Math.floor(available_ms * 0.85 / charCount)));
+
+    typeLine({ ...item, speed: autoSpeed });
   }
 }
 
