@@ -106,7 +106,6 @@
   </div>
 </div>
 
-<!-- MP3 파일을 같은 폴더에 song.mp3 이름으로 넣으세요 -->
 <audio id="aud" src="song.mp3" preload="auto"></audio>
 
 <script>
@@ -168,18 +167,22 @@ const lrc  = document.getElementById('lrc');
 const aud  = document.getElementById('aud');
 
 window.addEventListener('load', () => {
+  // 오디오가 실제로 재생 시작된 순간부터 가사 타이머 시작
+  const startLyrics = () => {
+    aud.removeEventListener('playing', startLyrics);
+    runLyrics();
+  };
+  aud.addEventListener('playing', startLyrics);
+
   const tryPlay = () => { aud.play().catch(() => {}); document.removeEventListener('click', tryPlay); };
   aud.play().catch(() => { document.addEventListener('click', tryPlay); });
-  runLyrics();
 });
 
 async function runLyrics() {
-  const startTime = Date.now();
   for (const item of LYRICS) {
-    const targetMs = item.at * 1000;
-    const elapsed = Date.now() - startTime;
-    const remaining = targetMs - elapsed;
-    if (remaining > 0) await wait(remaining);
+    // Date.now() 대신 오디오 실제 재생 위치 기준
+    const wait_ms = (item.at - aud.currentTime) * 1000;
+    if (wait_ms > 0) await wait(wait_ms);
     if (item.type === 'blank') { addBlank(); continue; }
     await typeLine(item);
   }
